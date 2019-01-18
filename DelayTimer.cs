@@ -1,9 +1,10 @@
 using System;
 
-using namespace CHIP_8_Emulator
+namespace CHIP_8_Emulator
 {
     public class DelayTimer
     {
         // TODO: Construct class
+        private const float FREQUENCY_HZ = 60.0;
     }
 }
