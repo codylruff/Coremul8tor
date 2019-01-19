@@ -42,7 +42,7 @@ namespace CHIP_8_Emulator
                 {
                     for (int i = 0; i<romData.Length;i++)
                     {
-                        string opcode = string.Format("{0:X2}{1:X2}", romData[i],romData[i+1]);
+                        string opcode = string.Format("{0:X2}{1:X2}", romData[i], romData[i+1]);
                         Console.WriteLine(opcode);
                         i++;
                     }
@@ -52,7 +52,6 @@ namespace CHIP_8_Emulator
             {
                 Console.Error.WriteLine($"Error: {ex.Message}");
             }
-
         }
         private static void Usage()
             {

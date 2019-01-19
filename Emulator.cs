@@ -10,11 +10,35 @@ namespace CHIP_8_Emulator
     public class Emulator 
     {
         #region Memory
-        public byte[] Memory;
+        // Memory Map:
+        // +---------------+= 0xFFF (4095) End of Chip-8 RAM
+        // |               |
+        // |               |
+        // |               |
+        // |               |
+        // |               |
+        // | 0x200 to 0xFFF|
+        // |     Chip-8    |
+        // | Program / Data|
+        // |     Space     |
+        // |               |
+        // |               |
+        // |               |
+        // +- - - - - - - -+= 0x600 (1536) Start of ETI 660 Chip-8 programs
+        // |               |
+        // |               |
+        // |               |
+        // +---------------+= 0x200 (512) Start of most Chip-8 programs
+        // | 0x000 to 0x1FF|
+        // | Reserved for  |
+        // |  interpreter  |
+        // +---------------+= 0x000 (0) Start of Chip-8 RAM
+        public ushort[] Memory;
         public byte[] Registers;
-        public ushort[] V = {0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xA,0xB,0xC,0xD,0xE,0xF};
+        public byte[] V = {0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xA,0xB,0xC,0xD,0xE,0xF};
         public ushort I;
         public ushort PC;
+        public Stack Stack;
         #endregion
 
         #region I/O
@@ -23,28 +47,35 @@ namespace CHIP_8_Emulator
         #endregion
 
         #region Execution
-        public int soundTimer = 0;
-        public int delayTimer = 0;
+        public byte soundTimer;
+        public byte delayTimer;
         struct OpCodeData
         {
-            public ushort OpCode; // Ex. OpCode = 4520
-            public ushort NNN; // NNN = 520
-            public byte NN, X, Y, N; // NN = 52, X = 5, Y = 2, N = 0
+            public ushort OpCode; 
+            public byte OpId; // Ex. Line = 45A2, opCode = 4
+            public ushort NNN; // NNN = 5A2
+            public byte NN; // NN = 5A
+            public byte X, Y, N; // X = 5, Y = A, N = 2
         }
         Dictionary<byte,Action<OpCodeData>> opcodes;
         #endregion
 
         #region Constructor
-        public Emulator()
+        public Emulator(byte[] romData)
         {
             BuildDictionary();
+            LoadProgram(romData);
+            var Stack = new Stack();
+            soundTimer = 0;
+            delayTimer = 0;
+            PC = 0x200;
+            ExecuteOpCode(Memory[PC]);
         }
         #endregion
 
         #region Methods
         private void BuildDictionary()
         {
-
             opcodes.Add(0x0,Execute_0x0);
             opcodes.Add(0x1,Execute_0x1);
             opcodes.Add(0x2,Execute_0x2);
@@ -62,33 +93,62 @@ namespace CHIP_8_Emulator
             opcodes.Add(0xE,Execute_0xE);
             opcodes.Add(0xF,Execute_0xF);
         }
-        private void LoadOpCode(ushort opCode)
+        private void LoadProgram(byte[] romData)
+        {
+            // Load romdata into memory before execution
+            for (int i = 0x200; i<0xFFF;i++)
+            {
+                Memory[i] = romData[i];
+                i++;
+            }
+            Console.WriteLine("Rom loaded succesfully.");
+        }
+        private void ExecuteOpCode(ushort opCode)
         {
             OpCodeData data;
             data.OpCode = opCode;
+            data.OpId = (byte)(opCode & 0xF000 >> 3);
             data.NNN = (UInt16)(opCode & 0x0FFF);
-            data.NN = (byte)(opCode & 0x0FF0);
-            data.X = (byte)(opCode & 0x0F00);
-            data.Y = (byte)(opCode & 0x00F0);
+            data.NN = (byte)(opCode & 0x0FF0 >> 1);
+            data.X = (byte)(opCode & 0x0F00 >> 2);
+            data.Y = (byte)(opCode & 0x00F0 >> 1);
             data.N = (byte)(opCode & 0x000F);
-            opcodes[data.N].DynamicInvoke(data.OpCode);
+            opcodes[data.OpId].DynamicInvoke(data);
         }
-        private void Execute_Subroutine(byte address)
+        private void Execute_Subroutine(ushort address)
         {
             // TODO: Implement subroutine functionality
+            // push current address on stack
+            Stack.Push(PC);
+            ExecuteOpCode(Memory[address]);
         }
         private void Execute_ClearScreen()
         {
             // TODO: Implement clear screen function
         }
+        private void Execute_ReturnFromSubroutine()
+        {
+            // 00EE	Return from a subroutine
+            // TODO: Execute address at top of stack
+            PC = (ushort)Stack.Pop();
+            ExecuteOpCode(Memory[PC]);
+        }
         private void Execute_0x0(OpCodeData data)
         {
-            // 0NNN: Execute machine language subroutine at address NNN
-            Execute_Subroutine(Memory[data.NNN]);
-            // 00E0: Clear the screen
-            Execute_ClearScreen();
-            // 00EE	Return from a subroutine
-            // TODO: ????
+            switch(data.OpCode)
+            {
+                case 0x00E0:
+                    // 00E0: Clear the screen
+                    Execute_ClearScreen();
+                    break;
+                case 0x00EE:
+                    Execute_ReturnFromSubroutine();
+                    break;
+                default:
+                    // 0NNN: Execute machine language subroutine at address NNN
+                    Execute_Subroutine(Memory[data.NNN]);
+                    break;
+            }          
         }
         private void Execute_0x1(OpCodeData data)
         {
@@ -148,19 +208,19 @@ namespace CHIP_8_Emulator
             {
                 // 8XY1	Set VX to VX OR VY
                 case 1:
-                    V[data.X] = (ushort)(V[data.X] | V[data.Y]);
+                    V[data.X] = (byte)(V[data.X] | V[data.Y]);
                     break;
                 // 8XY2	Set VX to VX AND VY
                 case 2:
-                    V[data.X] = (ushort)(V[data.X] & V[data.Y]);
+                    V[data.X] = (byte)(V[data.X] & V[data.Y]);
                     break;
                 // 8XY3	Set VX to VX XOR VY
                 case 3:
-                    V[data.X] = (ushort)(V[data.X] ^ V[data.Y]);
+                    V[data.X] = (byte)(V[data.X] ^ V[data.Y]);
                     break;
                 // 8XY4 Add the value of register VY to register VX
                 case 4:
-                    sum = (ushort)(V[data.X] + V[data.Y]);
+                    sum = (byte)(V[data.X] + V[data.Y]);
                     V[data.X] += V[data.Y];
                     if(sum > ushort.MaxValue)
                     {
@@ -175,7 +235,7 @@ namespace CHIP_8_Emulator
                 // Set VF to 00 if a borrow occurs
                 // Set VF to 01 if a borrow does not occur
                 case 5:
-                    diff = (ushort)(V[data.X] - V[data.Y]);
+                    diff = (byte)(V[data.X] - V[data.Y]);
                     V[data.X] -= V[data.Y];
                     if(diff < ushort.MinValue)
                     {
@@ -189,16 +249,16 @@ namespace CHIP_8_Emulator
                 // 8XY6	Store the value of register VY shifted right one bit in register VX
                 // Set register VF to the least significant bit prior to the shift
                 case 6:
-                    ushort leastSig = 0x0; // TODO: determine least significant bit
-                    V[data.X] = (ushort)(V[data.Y] >> 1);
+                    byte leastSig = 0x0; // TODO: determine least significant bit
+                    V[data.X] = (byte)(V[data.Y] >> 1);
                     V[0xF] = leastSig;
                     break;
                 // 8XY7 Set register VX to the value of VY minus VX
                 // Set VF to 00 if a borrow occurs
                 // Set VF to 01 if a borrow does not occur
                 case 7:
-                    diff = (ushort)(V[data.X] - (V[data.Y] - V[data.X]));
-                    V[data.X] -= (ushort)(V[data.Y] - V[data.X]);
+                    diff = (byte)(V[data.X] - (V[data.Y] - V[data.X]));
+                    V[data.X] -= (byte)(V[data.Y] - V[data.X]);
                     if(diff < ushort.MinValue)
                     {
                         V[0xF] = 0x0;
@@ -211,8 +271,8 @@ namespace CHIP_8_Emulator
                 // 8XYE Store the value of register VY shifted left one bit in register VX
                 // Set register VF to the most significant bit prior to the shift
                 case 8:
-                    ushort mostSig = 0x1; // TODO: determine most significant bit
-                    V[data.X] = (ushort)(V[data.Y] << 1);
+                    byte mostSig = 0x1; // TODO: determine most significant bit
+                    V[data.X] = (byte)(V[data.Y] << 1);
                     V[0xF] = mostSig;
                     break;
                 default:
@@ -246,8 +306,8 @@ namespace CHIP_8_Emulator
             // CXNN	Set VX to a random number with a mask of NN
 
             // TODO: Create random number and mask with NN
-            ushort rand = 0x0; // place holder
-            V[data.X] = rand; // not masked
+            ushort rand = 0x100; // place holder
+            V[data.X] = (byte)(rand & 0xFF0); // not masked correctly
         }
         private void Execute_0xD(OpCodeData data)
         {
@@ -274,7 +334,7 @@ namespace CHIP_8_Emulator
             {
             // FX07	Store the current value of the delay timer in register VX
             case 0x07:
-                V[data.X] = (ushort)delayTimer;
+                V[data.X] = (byte)delayTimer;
                 break;
             // FX0A	Wait for a keypress and store the result in register VX
             case 0x0A:
