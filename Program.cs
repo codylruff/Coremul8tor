@@ -10,6 +10,7 @@ namespace CHIP_8_Emulator
 {
     class Program
     {
+        public Emulator chip8;
         static void Main(string[] args)
         {
             try
@@ -34,18 +35,14 @@ namespace CHIP_8_Emulator
                 if (string.IsNullOrWhiteSpace(romFile)) Usage();
 
                 byte[] romData = File.ReadAllBytes(romFile);
+                Emulator chip8 = new Emulator(romData);
 
                 if (DisassemblerEnabled)
                 {
                     Disassembler.DisassembleChip8(romData, romData.Length);
                 }else
                 {
-                    for (int i = 0; i<romData.Length;i++)
-                    {
-                        string opcode = string.Format("{0:X2}{1:X2}", romData[i], romData[i+1]);
-                        Console.WriteLine(opcode);
-                        i++;
-                    }
+                    chip8.RunProgram();
                 }
             }
             catch (Exception ex)

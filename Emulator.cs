@@ -68,12 +68,22 @@ namespace CHIP_8_Emulator
             var Stack = new Stack();
             soundTimer = 0;
             delayTimer = 0;
-            PC = 0x200;
-            ExecuteOpCode(Memory[PC]);
+            PC = 0;
+            
         }
         #endregion
 
         #region Methods
+        public void RunProgram()
+        {
+            ushort nextInstruction;
+            for (ushort i = 0x200; i<0xFFF;i++)
+            {
+                PC = i;
+                nextInstruction = Memory[PC];
+                ExecuteOpCode(nextInstruction);
+            }
+        }
         private void BuildDictionary()
         {
             opcodes.Add(0x0,Execute_0x0);
@@ -96,7 +106,7 @@ namespace CHIP_8_Emulator
         private void LoadProgram(byte[] romData)
         {
             // Load romdata into memory before execution
-            for (int i = 0x200; i<0xFFF;i++)
+            for (ushort i = 0x200; i<0xFFF;i++)
             {
                 Memory[i] = romData[i];
                 i++;
