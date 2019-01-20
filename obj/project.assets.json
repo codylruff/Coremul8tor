@@ -687,11 +687,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\codyl\\projects\\Coremul8tor\\CHIP_8_Emulator.csproj",
+      "projectUniqueName": "C:\\Users\\codyl\\source\\repos\\codylruff\\Coremul8tor\\CHIP_8_Emulator.csproj",
       "projectName": "CHIP_8_Emulator",
-      "projectPath": "C:\\Users\\codyl\\projects\\Coremul8tor\\CHIP_8_Emulator.csproj",
+      "projectPath": "C:\\Users\\codyl\\source\\repos\\codylruff\\Coremul8tor\\CHIP_8_Emulator.csproj",
       "packagesPath": "C:\\Users\\codyl\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\codyl\\projects\\Coremul8tor\\obj\\",
+      "outputPath": "C:\\Users\\codyl\\source\\repos\\codylruff\\Coremul8tor\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"

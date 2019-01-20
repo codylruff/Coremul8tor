@@ -9,3 +9,14 @@ C:\Users\codyl\projects\Coremul8tor\bin\Debug\netcoreapp2.1\CHIP_8_Emulator.dll
 C:\Users\codyl\projects\Coremul8tor\bin\Debug\netcoreapp2.1\CHIP_8_Emulator.pdb
 C:\Users\codyl\projects\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.dll
 C:\Users\codyl\projects\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.pdb
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\bin\Debug\netcoreapp2.1\CHIP_8_Emulator.deps.json
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\bin\Debug\netcoreapp2.1\CHIP_8_Emulator.runtimeconfig.json
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\bin\Debug\netcoreapp2.1\CHIP_8_Emulator.runtimeconfig.dev.json
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\bin\Debug\netcoreapp2.1\CHIP_8_Emulator.dll
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\bin\Debug\netcoreapp2.1\CHIP_8_Emulator.pdb
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.csprojAssemblyReference.cache
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.csproj.CoreCompileInputs.cache
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.AssemblyInfoInputs.cache
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.AssemblyInfo.cs
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.dll
+C:\Users\codyl\source\repos\codylruff\Coremul8tor\obj\Debug\netcoreapp2.1\CHIP_8_Emulator.pdb
