@@ -33,22 +33,23 @@ namespace CHIP_8_Emulator
         // | Reserved for  |
         // |  interpreter  |
         // +---------------+= 0x000 (0) Start of Chip-8 RAM
-        public ushort[] Memory;
-        public byte[] Registers;
-        public byte[] V = {0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xA,0xB,0xC,0xD,0xE,0xF};
+        public byte[] Memory;
+        public const ushort startAddress = 0x200;
+        public ushort endAddress;
+        public byte[] V;
         public ushort I;
         public ushort PC;
         public Stack Stack;
         #endregion
 
         #region I/O
+        public byte soundTimer;
+        public byte delayTimer;
         public ushort keyPressed;
         public ushort[] sprites;
         #endregion
 
         #region Execution
-        public byte soundTimer;
-        public byte delayTimer;
         struct OpCodeData
         {
             public ushort OpCode; 
@@ -64,12 +65,12 @@ namespace CHIP_8_Emulator
         public Emulator(byte[] romData)
         {
             BuildDictionary();
+            byte[] Memory = new byte[0xFFF];
+            byte[] V = new byte[0xF];
             LoadProgram(romData);
             var Stack = new Stack();
             soundTimer = 0;
             delayTimer = 0;
-            PC = 0;
-            
         }
         #endregion
 
@@ -77,11 +78,11 @@ namespace CHIP_8_Emulator
         public void RunProgram()
         {
             ushort nextInstruction;
-            for (ushort i = 0x200; i<0xFFF;i++)
+            for (ushort i = startAddress; i < endAddress; i += 2)
             {
-                PC = i;
-                nextInstruction = Memory[PC];
+                nextInstruction = (ushort)((Memory[PC] << 8) | Memory[PC+1]);
                 ExecuteOpCode(nextInstruction);
+                PC += 2;
             }
         }
         private void BuildDictionary()
@@ -105,11 +106,12 @@ namespace CHIP_8_Emulator
         }
         private void LoadProgram(byte[] romData)
         {
+            PC = startAddress;
+            endAddress = (ushort)romData.Length;
             // Load romdata into memory before execution
-            for (ushort i = 0x200; i<0xFFF;i++)
+            for (ushort i = startAddress; i < endAddress; i++)
             {
                 Memory[i] = romData[i];
-                i++;
             }
             Console.WriteLine("Rom loaded succesfully.");
         }
@@ -117,11 +119,11 @@ namespace CHIP_8_Emulator
         {
             OpCodeData data;
             data.OpCode = opCode;
-            data.OpId = (byte)(opCode & 0xF000 >> 3);
+            data.OpId = (byte)(opCode & 0xF000 >> 0xC);
             data.NNN = (UInt16)(opCode & 0x0FFF);
-            data.NN = (byte)(opCode & 0x0FF0 >> 1);
-            data.X = (byte)(opCode & 0x0F00 >> 2);
-            data.Y = (byte)(opCode & 0x00F0 >> 1);
+            data.NN = (byte)(opCode & 0x0FF0 >> 4);
+            data.X = (byte)(opCode & 0x0F00 >> 8);
+            data.Y = (byte)(opCode & 0x00F0 >> 4);
             data.N = (byte)(opCode & 0x000F);
             opcodes[data.OpId].DynamicInvoke(data);
         }
@@ -141,7 +143,6 @@ namespace CHIP_8_Emulator
             // 00EE	Return from a subroutine
             // TODO: Execute address at top of stack
             PC = (ushort)Stack.Pop();
-            ExecuteOpCode(Memory[PC]);
         }
         private void Execute_0x0(OpCodeData data)
         {
@@ -177,7 +178,7 @@ namespace CHIP_8_Emulator
             
             if (V[data.X] == data.NN)
             {
-                // TODO: Skip next instruction
+                PC += 2;
             }
         }
         private void Execute_0x4(OpCodeData data)
@@ -185,9 +186,9 @@ namespace CHIP_8_Emulator
             // 4XNN	Skip the following instruction if the value of 
             // register VX is not equal to NN
 
-            if (V[data.X] == data.NN)
+            if (V[data.X] != data.NN)
             {
-                // TODO: Skip next instruction
+                PC += 2;
             }
         }
         private void Execute_0x5(OpCodeData data)
@@ -197,7 +198,7 @@ namespace CHIP_8_Emulator
 
             if (V[data.X] == V[data.Y])
             {
-                // TODO: Skip next instruction
+                PC += 2;
             }
         }
         private void Execute_0x6(OpCodeData data)
@@ -213,9 +214,13 @@ namespace CHIP_8_Emulator
         private void Execute_0x8(OpCodeData data)
         {
             ushort sum, diff;
-            // 8XY0	Store the value of register VY in register VX
+            
             switch(data.N)
             {
+                // 8XY0	Store the value of register VY in register VX
+                case 0:
+                    V[data.X] = V[data.Y];
+                    break;
                 // 8XY1	Set VX to VX OR VY
                 case 1:
                     V[data.X] = (byte)(V[data.X] | V[data.Y]);
@@ -229,15 +234,19 @@ namespace CHIP_8_Emulator
                     V[data.X] = (byte)(V[data.X] ^ V[data.Y]);
                     break;
                 // 8XY4 Add the value of register VY to register VX
+                // Set VF to 01 if a carry occurs
+                // Set VF to 00 if a carry does not occur
                 case 4:
                     sum = (byte)(V[data.X] + V[data.Y]);
-                    V[data.X] += V[data.Y];
-                    if(sum > ushort.MaxValue)
+                    
+                    if(sum > byte.MaxValue)
                     {
+                        V[data.X] = 0xFF; 
                         V[0xF] = 0x1;
                         break;
                     }else
                     {
+                        V[data.X] += V[data.Y];
                         V[0xF] = 0x0;
                         break;
                     }
@@ -247,7 +256,7 @@ namespace CHIP_8_Emulator
                 case 5:
                     diff = (byte)(V[data.X] - V[data.Y]);
                     V[data.X] -= V[data.Y];
-                    if(diff < ushort.MinValue)
+                    if(diff < byte.MinValue)
                     {
                         V[0xF] = 0x0;
                         break;
@@ -259,7 +268,7 @@ namespace CHIP_8_Emulator
                 // 8XY6	Store the value of register VY shifted right one bit in register VX
                 // Set register VF to the least significant bit prior to the shift
                 case 6:
-                    byte leastSig = 0x0; // TODO: determine least significant bit
+                    byte leastSig = (byte)(V[data.Y] & 1);
                     V[data.X] = (byte)(V[data.Y] >> 1);
                     V[0xF] = leastSig;
                     break;
@@ -269,7 +278,7 @@ namespace CHIP_8_Emulator
                 case 7:
                     diff = (byte)(V[data.X] - (V[data.Y] - V[data.X]));
                     V[data.X] -= (byte)(V[data.Y] - V[data.X]);
-                    if(diff < ushort.MinValue)
+                    if(diff < byte.MinValue)
                     {
                         V[0xF] = 0x0;
                         break;
@@ -281,7 +290,7 @@ namespace CHIP_8_Emulator
                 // 8XYE Store the value of register VY shifted left one bit in register VX
                 // Set register VF to the most significant bit prior to the shift
                 case 8:
-                    byte mostSig = 0x1; // TODO: determine most significant bit
+                    byte mostSig = (byte)(V[data.Y] & 0x8); // TODO: determine most significant bit
                     V[data.X] = (byte)(V[data.Y] << 1);
                     V[0xF] = mostSig;
                     break;
@@ -297,7 +306,7 @@ namespace CHIP_8_Emulator
             // not equal to the value of register VY
             if(V[data.X] != V[data.Y])
             {
-                // TODO: Skip next instruction
+                PC += 2;
             }
 
         }
@@ -315,9 +324,11 @@ namespace CHIP_8_Emulator
         {
             // CXNN	Set VX to a random number with a mask of NN
 
-            // TODO: Create random number and mask with NN
-            ushort rand = 0x100; // place holder
-            V[data.X] = (byte)(rand & 0xFF0); // not masked correctly
+            // Create random number and mask with NN
+            Random rand = new Random();
+            byte[] b = new byte[10];
+            rand.NextBytes(b);
+            V[data.X] = (byte)(b[1] & data.NN); // this may not be right
         }
         private void Execute_0xD(OpCodeData data)
         {
@@ -367,7 +378,7 @@ namespace CHIP_8_Emulator
             case 0x29:
                 I = sprites[V[data.X]];
                 break;
-            // FX33	Store the binary-coded decimal equivalent of the value 
+            // FX33	Store the binary-coded decimal equivalent of the value
             // stored in register VX at addresses I, I+1, and I+2
             case 0x33:
                 Memory[I] = (byte)V[data.X]; 
