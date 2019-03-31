@@ -6,7 +6,6 @@ using System.Text;
 
 namespace CHIP_8_Emulator
 {
-    
     public class Emulator 
     {
         #region Memory
@@ -65,16 +64,29 @@ namespace CHIP_8_Emulator
         public Emulator(byte[] romData)
         {
             BuildDictionary();
-            byte[] Memory = new byte[0xFFF];
-            byte[] V = new byte[0xF];
+            Memory = new byte[0xFFF];
+            V = new byte[0xF];
             LoadProgram(romData);
-            var Stack = new Stack();
+            Stack = new Stack();
             soundTimer = 0;
             delayTimer = 0;
         }
         #endregion
 
         #region Methods
+        private void LoadProgram(byte[] romData)
+        {
+            PC = startAddress;
+            endAddress = (ushort)romData.Length;
+            // Load romdata into memory before execution
+            for (ushort i = startAddress; i < endAddress; i++)
+            {
+                Console.WriteLine(romData[i].ToString());
+                Memory[i] = romData[i];
+            }
+            Console.WriteLine("Rom loaded succesfully.");
+        }
+
         public void RunProgram()
         {
             ushort nextInstruction;
@@ -87,45 +99,56 @@ namespace CHIP_8_Emulator
         }
         private void BuildDictionary()
         {
-            opcodes.Add(0x0,Execute_0x0);
-            opcodes.Add(0x1,Execute_0x1);
-            opcodes.Add(0x2,Execute_0x2);
-            opcodes.Add(0x3,Execute_0x3);
-            opcodes.Add(0x4,Execute_0x4);
-            opcodes.Add(0x5,Execute_0x5);
-            opcodes.Add(0x6,Execute_0x6);
-            opcodes.Add(0x7,Execute_0x7);
-            opcodes.Add(0x8,Execute_0x8);
-            opcodes.Add(0x9,Execute_0x9);
-            opcodes.Add(0xA,Execute_0xA);
-            opcodes.Add(0xB,Execute_0xB);
-            opcodes.Add(0xC,Execute_0xC);
-            opcodes.Add(0xD,Execute_0xD);
-            opcodes.Add(0xE,Execute_0xE);
-            opcodes.Add(0xF,Execute_0xF);
+           opcodes = new Dictionary<byte, Action<OpCodeData>>
+           {
+                { 0x0, ClearOrReturn }, // There are two instructions starting with a 0 nibble, didn't seem worth its own dictionary
+                { 0x1, Jump },
+                { 0x2, CallSubroutine },
+                { 0x3, SkipIfXEqual },
+                { 0x4, SkipIfXNotEqual },
+                { 0x5, SkipIfXEqualY },
+                { 0x6, SetX },
+                { 0x7, AddX },
+                { 0x8, Arithmetic },
+                { 0x9, SkipIfXNotEqualY },
+                { 0xA, SetI },
+                { 0xB, JumpWithOffset },
+                { 0xC, Rnd },
+                { 0xD, DrawSprite },
+                { 0xE, SkipOnKey },
+                {0x0,ClearOrReturn},
+                {0x1,Jump},
+                {0x2,CallSubroutine},
+                {0x3,SkipIfXEqual},
+                {0x4,SkipIfXNotEqual},
+                {0x5,SkipIfXEqualY},
+                {0x6,SetX},
+                {0x7,AddX},
+                {0x8,Arithmetic},
+                {0x9,SkipIfXNotEqualY},
+                {0xA,SetI},
+                {0xB,JumpWithOffSet},
+                {0xC,Rnd},
+                {0xD,DrawSprite},
+                {0xE,SkipOnKey},
+                {0xF,Execute_0xF}
+            };
         }
-        private void LoadProgram(byte[] romData)
-        {
-            PC = startAddress;
-            endAddress = (ushort)romData.Length;
-            // Load romdata into memory before execution
-            for (ushort i = startAddress; i < endAddress; i++)
-            {
-                Memory[i] = romData[i];
-            }
-            Console.WriteLine("Rom loaded succesfully.");
-        }
+        
         private void ExecuteOpCode(ushort opCode)
         {
-            OpCodeData data;
-            data.OpCode = opCode;
-            data.OpId = (byte)(opCode & 0xF000 >> 0xC);
-            data.NNN = (UInt16)(opCode & 0x0FFF);
-            data.NN = (byte)(opCode & 0x0FF0 >> 4);
-            data.X = (byte)(opCode & 0x0F00 >> 8);
-            data.Y = (byte)(opCode & 0x00F0 >> 4);
-            data.N = (byte)(opCode & 0x000F);
-            opcodes[data.OpId].DynamicInvoke(data);
+            var data = new OpCodeData()
+            {
+                OpCode = opCode,
+                OpId = (byte)(opCode & 0xF000 >> 0xC),
+                NNN = (UInt16)(opCode & 0x0FFF),
+                NN = (byte)(opCode & 0x00FF),
+                N = (byte)(opCode & 0x000F),
+                X = (byte)(opCode & 0x0F00 >> 8),
+                Y = (byte)(opCode & 0x00F0 >> 4)
+            };
+            // Loop up the OpCode using the first nibble and execute.
+	        opcodes[data.OpId](data);
         }
         private void Execute_Subroutine(ushort address)
         {
@@ -144,7 +167,7 @@ namespace CHIP_8_Emulator
             // TODO: Execute address at top of stack
             PC = (ushort)Stack.Pop();
         }
-        private void Execute_0x0(OpCodeData data)
+        private void ClearOrReturn(OpCodeData data)
         {
             switch(data.OpCode)
             {
@@ -161,17 +184,17 @@ namespace CHIP_8_Emulator
                     break;
             }          
         }
-        private void Execute_0x1(OpCodeData data)
+        private void Jump(OpCodeData data)
         {
             // 1NNN	Jump to address NNN
             PC = data.NNN;
         }
-        private void Execute_0x2(OpCodeData data)
+        private void CallSubroutine(OpCodeData data)
         {
             // 2NNN	Execute subroutine starting at address NNN
             Execute_Subroutine(Memory[data.NNN]);
         }
-        private void Execute_0x3(OpCodeData data)
+        private void SkipIfXEqual(OpCodeData data)
         {
             // 3XNN	Skip the following instruction 
             // if the value of register VX equals NN
@@ -181,7 +204,7 @@ namespace CHIP_8_Emulator
                 PC += 2;
             }
         }
-        private void Execute_0x4(OpCodeData data)
+        private void SkipIfXNotEqual(OpCodeData data)
         {
             // 4XNN	Skip the following instruction if the value of 
             // register VX is not equal to NN
@@ -191,7 +214,7 @@ namespace CHIP_8_Emulator
                 PC += 2;
             }
         }
-        private void Execute_0x5(OpCodeData data)
+        private void SkipIfXEqualY(OpCodeData data)
         {
             // 5XY0	Skip the following instruction if the 
             // value of register VX is equal to the value of register VY
@@ -201,17 +224,17 @@ namespace CHIP_8_Emulator
                 PC += 2;
             }
         }
-        private void Execute_0x6(OpCodeData data)
+        private void SetX(OpCodeData data)
         {
             // 6XNN	Store number NN in register VX
             V[data.X] = data.NN;
         }
-        private void Execute_0x7(OpCodeData data)
+        private void AddX(OpCodeData data)
         {
             // 7XNN	Add the value NN to register VX
             V[data.X] += data.NN;
         }
-        private void Execute_0x8(OpCodeData data)
+        private void Arithmetic(OpCodeData data)
         {
             ushort sum, diff;
             
@@ -299,7 +322,7 @@ namespace CHIP_8_Emulator
                     break;
             }
         }
-        private void Execute_0x9(OpCodeData data)
+        private void SkipIfXNotEqualY(OpCodeData data)
         {
             
             // 9XY0	Skip the following instruction if the value of register VX is
@@ -310,17 +333,17 @@ namespace CHIP_8_Emulator
             }
 
         }
-        private void Execute_0xA(OpCodeData data)
+        private void SetI(OpCodeData data)
         {
             // ANNN	Store memory address NNN in register I
             I = data.NNN;
         }
-        private void Execute_0xB(OpCodeData data)
+        private void JumpWithOffSet(OpCodeData data)
         {
             // BNNN	Jump to address NNN + V0
             PC = (ushort)(data.NNN + V[0x0]);
         }
-        private void Execute_0xC(OpCodeData data)
+        private void Rnd(OpCodeData data)
         {
             // CXNN	Set VX to a random number with a mask of NN
 
@@ -330,7 +353,7 @@ namespace CHIP_8_Emulator
             rand.NextBytes(b);
             V[data.X] = (byte)(b[1] & data.NN); // this may not be right
         }
-        private void Execute_0xD(OpCodeData data)
+        private void DrawSprite(OpCodeData data)
         {
             // DXYN	Draw a sprite at position VX, VY 
             // with N bytes of sprite data starting at the address stored in I
@@ -338,7 +361,7 @@ namespace CHIP_8_Emulator
 
             // TODO: Draw sprites to screen
         }
-        private void Execute_0xE(OpCodeData data)
+        private void SkipOnKey(OpCodeData data)
         {
             // EX9E	Skip the following instruction if the key corresponding
             // to the hex value currently stored in register VX is pressed

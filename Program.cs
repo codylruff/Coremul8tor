@@ -10,14 +10,15 @@ namespace CHIP_8_Emulator
 {
     class Program
     {
-        public Emulator chip8;
         static void Main(string[] args)
         {
+            
             try
             {
                 // Parse args
+                Emulator chip8;
                 bool DisassemblerEnabled = false;
-                string romFile = "";
+                string romFile = @"C:\Users\codyl\source\repos\codylruff\Coremul8tor\Roms\Invaders.ch8";
 
                 for (int i = 0; i < args.Length; i++)
                 {
@@ -35,13 +36,14 @@ namespace CHIP_8_Emulator
                 if (string.IsNullOrWhiteSpace(romFile)) Usage();
 
                 byte[] romData = File.ReadAllBytes(romFile);
-                Emulator chip8 = new Emulator(romData);
+                chip8 = new Emulator(romData);
 
                 if (DisassemblerEnabled)
                 {
                     Disassembler.DisassembleChip8(romData, romData.Length);
                 }else
                 {
+                    Console.WriteLine("Starting Emulator . . . ");
                     chip8.RunProgram();
                 }
             }
@@ -51,7 +53,7 @@ namespace CHIP_8_Emulator
             }
         }
         private static void Usage()
-            {
+        {
                 Console.WriteLine("Help:");
                 Console.WriteLine();
                 Console.WriteLine("CHIP_8_Emulator.exe [options] RomFile");
@@ -59,6 +61,6 @@ namespace CHIP_8_Emulator
                 Console.WriteLine("Options:");
                 Console.WriteLine("-d   Run the disassembler on the RomFile");
                 Console.WriteLine();
-            }
+        }
     }
 }
