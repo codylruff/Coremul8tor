@@ -73,7 +73,7 @@ namespace CHIP_8_Emulator
         }
         #endregion
 
-        #region Methods
+        #region Operations
         private void LoadProgram(byte[] romData)
         {
             PC = startAddress;
@@ -90,10 +90,14 @@ namespace CHIP_8_Emulator
         public void RunProgram()
         {
             ushort nextInstruction;
+	    delayTimer = 60;
+	    soundTimer = 60;
             for (ushort i = startAddress; i < endAddress; i += 2)
             {
                 nextInstruction = (ushort)((Memory[PC] << 8) | Memory[PC+1]);
                 ExecuteOpCode(nextInstruction);
+		delayTimer--;
+		soundTimer--;
                 PC += 2;
             }
         }
