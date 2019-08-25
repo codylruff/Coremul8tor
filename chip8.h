@@ -9,21 +9,13 @@ private:
         char NN;
         char X, Y, N;
      };
+    std::map<char,void (*op)> operations;
+    void LoadOperations()
+    {
+        
+    };
 public:
-    std::vector<char> Memory;
-    const u_int16* start = 0x200;
-    const u_int16* end;
-    std::vector<char> V;
-    u_int16 I;
-    u_int16 PC;
-    Stack stack;
-        #endregion
- 
-        #region I/O
-        public byte soundTimer;
-        public byte delayTimer;
-        public ushort keyPressed;
-        public ushort[] sprites;
+   
 
 };
 
