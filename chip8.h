@@ -5,7 +5,7 @@ private:
    struct OpCode 
     {
         char OpId;
-        u_int16 NNN;
+        unsigned short NNN;
         char NN;
         char X, Y, N;
      };
